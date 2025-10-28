@@ -3,7 +3,13 @@ import React, { useState, useEffect } from 'react';
 import { signOut } from 'firebase/auth';
 import { auth } from '../firebase/firebaseConfig';
 import { useAuth } from '../context/AuthContext';
-import { getExperiencesByUserId } from '../firebase/firestoreQueries';
+import { 
+  getExperiencesByUserId, 
+  deleteExperience, 
+  updateExperience,
+  getUserProfile,
+  updateUserProfile 
+} from '../firebase/firestoreQueries';
 import { Navigate, Link } from 'react-router-dom';
 import ElectricBorder from '../components/animations/ElectricBorder';
 import FuzzyText from '../components/animations/FuzzyText';
@@ -13,6 +19,16 @@ const Profile = () => {
   const [userExperiences, setUserExperiences] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('experiences');
+  const [editingExperience, setEditingExperience] = useState(null);
+  const [editingProfile, setEditingProfile] = useState(false);
+  const [profileData, setProfileData] = useState({
+    displayName: '',
+    bio: '',
+    skills: '',
+    linkedin: '',
+    github: '',
+    portfolio: ''
+  });
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -22,6 +38,19 @@ const Profile = () => {
         // Get experiences by user ID
         const experiences = await getExperiencesByUserId(currentUser.uid);
         setUserExperiences(experiences);
+        
+        // Get user profile data
+        const profile = await getUserProfile(currentUser.uid);
+        if (profile) {
+          setProfileData({
+            displayName: profile.displayName || '',
+            bio: profile.bio || '',
+            skills: profile.skills || '',
+            linkedin: profile.linkedin || '',
+            github: profile.github || '',
+            portfolio: profile.portfolio || ''
+          });
+        }
       } catch (error) {
         console.error('Error fetching user data:', error);
       } finally {
@@ -71,6 +100,59 @@ const Profile = () => {
     }
   };
 
+  const handleEditExperience = (experience) => {
+    setEditingExperience(experience);
+  };
+
+  const handleDeleteExperience = async (experienceId) => {
+    if (window.confirm('Are you sure you want to delete this experience? This action cannot be undone.')) {
+      try {
+        await deleteExperience(experienceId);
+        setUserExperiences(userExperiences.filter(exp => exp.id !== experienceId));
+      } catch (error) {
+        console.error('Error deleting experience:', error);
+        alert('Failed to delete experience. Please try again.');
+      }
+    }
+  };
+
+  const handleSaveExperience = async (e) => {
+    e.preventDefault();
+    
+    try {
+      await updateExperience(editingExperience.id, editingExperience);
+      setUserExperiences(userExperiences.map(exp => 
+        exp.id === editingExperience.id ? editingExperience : exp
+      ));
+      setEditingExperience(null);
+    } catch (error) {
+      console.error('Error updating experience:', error);
+      alert('Failed to update experience. Please try again.');
+    }
+  };
+
+  const handleEditProfile = () => {
+    setEditingProfile(true);
+  };
+
+  const handleSaveProfile = async (e) => {
+    e.preventDefault();
+    
+    try {
+      await updateUserProfile(currentUser.uid, profileData);
+      setUserProfile(prev => ({ ...prev, ...profileData }));
+      setEditingProfile(false);
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      alert('Failed to update profile. Please try again.');
+    }
+  };
+
+  const handleProfileChange = (e) => {
+    const { name, value } = e.target;
+    setProfileData(prev => ({ ...prev, [name]: value }));
+  };
+
   if (!currentUser) {
     return <Navigate to="/login" />;
   }
@@ -107,6 +189,12 @@ const Profile = () => {
                 </button>
               </Link>
               <button
+                onClick={handleEditProfile}
+                className="px-6 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors font-medium"
+              >
+                Edit Profile
+              </button>
+              <button
                 onClick={handleLogout}
                 className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors font-medium"
               >
@@ -116,13 +204,32 @@ const Profile = () => {
           </div>
         </div>
 
-      
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
+          <div className="bg-gray-800/50 backdrop-blur-md rounded-xl p-6 text-center">
+            <div className="text-3xl font-bold text-blue-400 mb-2">{userExperiences.length}</div>
+            <div className="text-gray-400">Experiences Shared</div>
+          </div>
+          <div className="bg-gray-800/50 backdrop-blur-md rounded-xl p-6 text-center">
+            <div className="text-3xl font-bold text-green-400 mb-2">
+              {userExperiences.filter(exp => exp.offerStatus === 'Accepted').length}
+            </div>
+            <div className="text-gray-400">Offers Received</div>
+          </div>
+          <div className="bg-gray-800/50 backdrop-blur-md rounded-xl p-6 text-center">
+            <div className="text-3xl font-bold text-purple-400 mb-2">
+              {new Set(userExperiences.map(exp => exp.companyName)).size}
+            </div>
+            <div className="text-gray-400">Companies Applied</div>
+          </div>
+        </div>
+
         {/* Tab Navigation */}
         <div className="bg-gray-800/50 backdrop-blur-md rounded-xl shadow-xl p-6">
           <div className="border-b border-gray-700 mb-6">
-            <nav className="flex space-x-8">
+            <nav className="flex space-x-8 overflow-x-auto">
               <button
-                className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                className={`py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
                   activeTab === 'experiences'
                     ? 'border-blue-500 text-blue-400'
                     : 'border-transparent text-gray-400 hover:text-gray-300'
@@ -131,7 +238,16 @@ const Profile = () => {
               >
                 Your Experiences
               </button>
-            
+              <button
+                className={`py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
+                  activeTab === 'profile'
+                    ? 'border-blue-500 text-blue-400'
+                    : 'border-transparent text-gray-400 hover:text-gray-300'
+                }`}
+                onClick={() => setActiveTab('profile')}
+              >
+                Profile Settings
+              </button>
             </nav>
           </div>
 
@@ -150,7 +266,31 @@ const Profile = () => {
                     >
                       <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-4 mb-4">
                         <div className="flex-1">
-                          <h3 className="text-xl font-semibold text-white mb-2">{experience.position}</h3>
+                          <div className="flex justify-between items-start mb-2">
+                            <h3 className="text-xl font-semibold text-white">{experience.position}</h3>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => handleEditExperience(experience)}
+                                className="text-blue-400 hover:text-blue-300 text-sm"
+                                title="Edit experience"
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v10a2 2 0 002 2h5a2 2 0 002-2m0 0a2 2 0 00-2-2V5a2 2 0 00-2 2H6a2 2 0 00-2 2v10a2 2 0 002 2zm2-13a1 1 0 011-1h2a1 1 0 011 1v10a1 1 0 01-1 1v-10z" />
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 4a1 1 0 10-2 0" />
+                                </svg>
+                              </button>
+                              <button
+                                onClick={() => handleDeleteExperience(experience.id)}
+                                className="text-red-400 hover:text-red-300 text-sm"
+                                title="Delete experience"
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 01-2.828 0l-4.244-4.244a2 2 0 00-2.828 0L4.244 4.244A2 2 0 005.172 5.172l4.244 4.244A2 2 0 008.828 0l4.244-4.244A2 2 0 0011.828 0L7.58 7.586a2 2 0 00-2.828 0L4.244 11.828A2 2 0 005.172 5.172l4.244-4.244z" />
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7l-3 3m0 0l-3 3m3-3V4" />
+                                </svg>
+                              </button>
+                            </div>
+                          </div>
                           <div className="flex flex-wrap items-center gap-3 text-sm text-gray-400 mb-3">
                             <span className="flex items-center">
                               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -250,9 +390,318 @@ const Profile = () => {
             </div>
           )}
 
-         
+          {activeTab === 'profile' && (
+            <div>
+              {editingProfile ? (
+                <div className="bg-gray-700/30 rounded-lg p-6 mb-6">
+                  <h3 className="text-xl font-semibold text-white mb-4">Edit Profile</h3>
+                  <form onSubmit={handleSaveProfile} className="space-y-4">
+                    <div>
+                      <label htmlFor="displayName" className="block text-sm font-medium text-gray-300 mb-2">Display Name</label>
+                      <input
+                        type="text"
+                        id="displayName"
+                        name="displayName"
+                        value={profileData.displayName}
+                        onChange={handleProfileChange}
+                        className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="bio" className="block text-sm font-medium text-gray-300 mb-2">Bio</label>
+                      <textarea
+                        id="bio"
+                        name="bio"
+                        value={profileData.bio}
+                        onChange={handleProfileChange}
+                        rows={4}
+                        className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white placeholder-gray-400"
+                        placeholder="Tell us about yourself..."
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="skills" className="block text-sm font-medium text-gray-300 mb-2">Skills</label>
+                      <input
+                        type="text"
+                        id="skills"
+                        name="skills"
+                        value={profileData.skills}
+                        onChange={handleProfileChange}
+                        className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white placeholder-gray-400"
+                        placeholder="e.g. JavaScript, React, Node.js"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="linkedin" className="block text-sm font-medium text-gray-300 mb-2">LinkedIn</label>
+                      <input
+                        type="text"
+                        id="linkedin"
+                        name="linkedin"
+                        value={profileData.linkedin}
+                        onChange={handleProfileChange}
+                        className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white placeholder-gray-400"
+                        placeholder="https://linkedin.com/in/yourname"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="github" className="block text-sm font-medium text-gray-300 mb-2">GitHub</label>
+                      <input
+                        type="text"
+                        id="github"
+                        name="github"
+                        value={profileData.github}
+                        onChange={handleProfileChange}
+                        className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white placeholder-gray-400"
+                        placeholder="https://github.com/yourusername"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="portfolio" className="block text-sm font-medium text-gray-300 mb-2">Portfolio</label>
+                      <input
+                        type="text"
+                        id="portfolio"
+                        name="portfolio"
+                        value={profileData.portfolio}
+                        onChange={handleProfileChange}
+                        className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white placeholder-gray-400"
+                        placeholder="https://yourportfolio.com"
+                      />
+                    </div>
+                    <div className="flex justify-end space-x-3 mt-6">
+                      <button
+                        type="button"
+                        onClick={() => setEditingProfile(false)}
+                        className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors font-medium"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium"
+                      >
+                        Save Changes
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              ) : (
+                <div className="bg-gray-700/30 rounded-lg p-6">
+                  <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-xl font-semibold text-white">Profile Information</h3>
+                    <button
+                      onClick={handleEditProfile}
+                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium"
+                    >
+                      Edit Profile
+                    </button>
+                  </div>
+                  <div className="space-y-4">
+                    <div className="flex items-center">
+                      <span className="text-gray-400 w-32">Display Name:</span>
+                      <span className="text-white ml-4">{profileData.displayName || 'Not set'}</span>
+                    </div>
+                    <div className="flex items-center">
+                      <span className="text-gray-400 w-32">Email:</span>
+                      <span className="text-white ml-4">{currentUser.email}</span>
+                    </div>
+                    {profileData.bio && (
+                      <div className="flex items-start">
+                        <span className="text-gray-400 w-32">Bio:</span>
+                        <p className="text-white ml-4 flex-1">{profileData.bio}</p>
+                      </div>
+                    )}
+                    {profileData.skills && (
+                      <div className="flex items-start">
+                        <span className="text-gray-400 w-32">Skills:</span>
+                        <p className="text-white ml-4 flex-1">{profileData.skills}</p>
+                      </div>
+                    )}
+                    {profileData.linkedin && (
+                      <div className="flex items-center">
+                        <span className="text-gray-400 w-32">LinkedIn:</span>
+                        <a 
+                          href={profileData.linkedin} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-blue-400 hover:text-blue-300 ml-4 truncate"
+                        >
+                          {profileData.linkedin}
+                        </a>
+                      </div>
+                    )}
+                    {profileData.github && (
+                      <div className="flex items-center">
+                        <span className="text-gray-400 w-32">GitHub:</span>
+                        <a 
+                          href={profileData.github} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-blue-400 hover:text-blue-300 ml-4 truncate"
+                        >
+                          {profileData.github}
+                        </a>
+                      </div>
+                    )}
+                    {profileData.portfolio && (
+                      <div className="flex items-center">
+                        <span className="text-gray-400 w-32">Portfolio:</span>
+                        <a 
+                          href={profileData.portfolio} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-blue-400 hover:text-blue-300 ml-4 truncate"
+                        >
+                          {profileData.portfolio}
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
+
+      {/* Edit Experience Modal */}
+      {editingExperience && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-800 rounded-xl shadow-2xl max-w-2xl w-full max-h-screen overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-semibold text-white">Edit Experience</h3>
+                <button
+                  onClick={() => setEditingExperience(null)}
+                  className="text-gray-400 hover:text-white"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              <form onSubmit={handleSaveExperience} className="space-y-4">
+                <div>
+                  <label htmlFor="position" className="block text-sm font-medium text-gray-300 mb-2">Position</label>
+                  <input
+                    type="text"
+                    id="position"
+                    name="position"
+                    value={editingExperience.position}
+                    onChange={(e) => setEditingExperience({...editingExperience, position: e.target.value})}
+                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
+                    required
+                  />
+                </div>
+                <div>
+                  <label htmlFor="companyName" className="block text-sm font-medium text-gray-300 mb-2">Company Name</label>
+                  <input
+                    type="text"
+                    id="companyName"
+                    name="companyName"
+                    value={editingExperience.companyName}
+                    onChange={(e) => setEditingExperience({...editingExperience, companyName: e.target.value})}
+                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
+                    required
+                  />
+                </div>
+                <div>
+                  <label htmlFor="description" className="block text-sm font-medium text-gray-300 mb-2">Experience Description</label>
+                  <textarea
+                    id="description"
+                    name="description"
+                    value={editingExperience.description}
+                    onChange={(e) => setEditingExperience({...editingExperience, description: e.target.value})}
+                    rows={5}
+                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
+                    required
+                  />
+                </div>
+                <div>
+                  <label htmlFor="difficulty" className="block text-sm font-medium text-gray-300 mb-2">Difficulty</label>
+                  <select
+                    id="difficulty"
+                    name="difficulty"
+                    value={editingExperience.difficulty}
+                    onChange={(e) => setEditingExperience({...editingExperience, difficulty: e.target.value})}
+                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
+                  >
+                    <option value="">Select difficulty</option>
+                    <option value="Easy">Easy</option>
+                    <option value="Medium">Medium</option>
+                    <option value="Hard">Hard</option>
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="offerStatus" className="block text-sm font-medium text-gray-300 mb-2">Offer Status</label>
+                  <select
+                    id="offerStatus"
+                    name="offerStatus"
+                    value={editingExperience.offerStatus}
+                    onChange={(e) => setEditingExperience({...editingExperience, offerStatus: e.target.value})}
+                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
+                  >
+                    <option value="">Select status</option>
+                    <option value="Accepted">Accepted</option>
+                    <option value="Rejected">Rejected</option>
+                    <option value="Pending">Pending</option>
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="salary" className="block text-sm font-medium text-gray-300 mb-2">Salary Range</label>
+                  <input
+                    type="text"
+                    id="salary"
+                    name="salary"
+                    value={editingExperience.salary}
+                    onChange={(e) => setEditingExperience({...editingExperience, salary: e.target.value})}
+                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white placeholder-gray-400"
+                    placeholder="e.g. $80,000 - $120,000"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="location" className="block text-sm font-medium text-gray-300 mb-2">Location</label>
+                  <input
+                    type="text"
+                    id="location"
+                    name="location"
+                    value={editingExperience.location}
+                    onChange={(e) => setEditingExperience({...editingExperience, location: e.target.value})}
+                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white placeholder-gray-400"
+                    placeholder="e.g. San Francisco, CA"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="tips" className="block text-sm font-medium text-gray-300 mb-2">Tips for Candidates</label>
+                  <textarea
+                    id="tips"
+                    name="tips"
+                    value={editingExperience.tips}
+                    onChange={(e) => setEditingExperience({...editingExperience, tips: e.target.value})}
+                    rows={3}
+                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white placeholder-gray-400"
+                    placeholder="Share any tips or advice for future candidates..."
+                  />
+                </div>
+                <div className="flex justify-end space-x-3 mt-6">
+                  <button
+                    type="button"
+                    onClick={() => setEditingExperience(null)}
+                    className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors font-medium"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium"
+                  >
+                    Save Changes
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

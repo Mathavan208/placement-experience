@@ -1,4 +1,4 @@
-import { collection, doc, addDoc, getDoc, getDocs, query, orderBy, limit, where, updateDoc, arrayUnion, serverTimestamp, increment } from 'firebase/firestore';
+import { collection, doc, addDoc, getDoc, getDocs,deleteDoc, query, orderBy, limit, where, updateDoc, arrayUnion, serverTimestamp, increment } from 'firebase/firestore';
 import { db } from './firebaseConfig';
 
 // Companies collection
@@ -146,7 +146,20 @@ export const incrementExperienceViews = async (experienceId) => {
     views: increment(1)
   });
 };
+// Add these functions to your firestoreQueries.js file
 
+export const deleteExperience = async (experienceId) => {
+  const experienceDoc = doc(db, 'experiences', experienceId);
+  await deleteDoc(experienceDoc);
+};
+
+export const updateExperience = async (experienceId, experienceData) => {
+  const experienceDoc = doc(db, 'experiences', experienceId);
+  await updateDoc(experienceDoc, {
+    ...experienceData,
+    lastUpdated: serverTimestamp()
+  });
+};
 // Users collection
 export const getUserProfile = async (userId) => {
   const userDoc = doc(db, 'users', userId);
