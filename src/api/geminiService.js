@@ -13,14 +13,15 @@ export const generateCompanySummary = async (experiences) => {
       throw new Error("No experiences provided for summary generation");
     }
 
-    const prompt = `Based on the following placement experiences, provide a comprehensive summary of the interview process, rounds, and tips for candidates. Format your response with clear sections:
-    
-    1. Overall Interview Process
-    2. Common Interview Rounds
-    3. Key Preparation Tips
-    4. Difficulty Level
-    5. Salary Range
-    6. Final Recommendations
+ const prompt = `
+Provide the summary in clean, well-formatted **Markdown** with:
+
+- Clear headings (##)
+- Bullet points
+- Numbered lists
+- Short paragraphs
+- Bold highlight for key info
+Based on these experiences:
     
     ${experiences.map(exp => `
       Company: ${exp.companyName}

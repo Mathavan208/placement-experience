@@ -4,6 +4,7 @@ import { getCompanyById, getExperiencesByCompanyId, getExperiencesByCompanyName,
 import { generateCompanySummary } from '../../api/geminiService';
 import ElectricBorder from '../animations/ElectricBorder';
 import FuzzyText from '../animations/FuzzyText';
+import ReactMarkdown from "react-markdown";
 
 const CompanyDetails = () => {
   const { id } = useParams();
@@ -414,8 +415,26 @@ const CompanyDetails = () => {
                 </div>
               ) : summary ? (
                 <div className="prose prose-invert max-w-none">
-                  <div className="p-6 text-gray-300 whitespace-pre-line rounded-lg bg-gray-700/30">{summary}</div>
-                </div>
+<ReactMarkdown
+  components={{
+    p: ({ children }) => (
+      <p className="mb-3 leading-relaxed text-gray-300">{children}</p>
+    ),
+    h2: ({ children }) => (
+      <h2 className="mt-6 mb-3 text-xl font-bold text-blue-400">{children}</h2>
+    ),
+    li: ({ children }) => (
+      <li className="ml-5 text-gray-300 list-disc">{children}</li>
+    ),
+    strong: ({ children }) => (
+      <strong className="font-semibold text-white">{children}</strong>
+    )
+  }}
+>
+  {summary}
+</ReactMarkdown>
+
+</div>
               ) : (
                 <div className="py-8 text-center text-gray-400">
                   {experiences.length > 0 
