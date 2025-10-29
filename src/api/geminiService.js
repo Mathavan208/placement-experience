@@ -74,27 +74,41 @@ export const generateCompanySummary = async (experiences) => {
   }
 };
 
-export const answerQuestion = async (question, experiences) => {
-  try {
-    if (!experiences || experiences.length === 0) {
-      return "I don't have any experiences to answer your question.";
-    }
+export const answerQuestion = async (question, data) => {
+  const { companies, allExperiences, userProfile, userExperiences } = data;
 
-    const prompt = `Based on the following placement experiences, answer this question: "${question}"
-    
-    ${experiences.map(exp => `
-      Company: ${exp.companyName}
-      Position: ${exp.position}
-      Experience: ${exp.description}
-      Rounds: ${exp.rounds ? exp.rounds.join(', ') : 'Not specified'}
-      Tips: ${exp.tips || 'Not provided'}
-      Difficulty: ${exp.difficulty || 'Not specified'}
-      Salary: ${exp.salary || 'Not specified'}
-      Offer Status: ${exp.offerStatus || 'Not specified'}
-    `).join('\n\n')}`;
-    
-    console.log("Sending question to Gemini API");
-    
+  const prompt = `
+  You are a placement assistant bot.
+
+  USER QUESTION: "${question}"
+
+  COMPANIES AVAILABLE:
+  ${companies.map(c => `- ${c.name} (${c.experienceCount} experiences)`).join('\n')}
+
+  USER PROFILE:
+  ${userProfile ? JSON.stringify(userProfile) : "User not logged in"}
+
+  USER EXPERIENCES:
+  ${userExperiences?.length ? userExperiences.map(e => e.companyName).join(", ") : "None uploaded"}
+
+  ALL EXPERIENCES:
+  ${allExperiences.map(exp => `
+    Company: ${exp.companyName}
+    Position: ${exp.position}
+    Description: ${exp.description}
+    Rounds: ${exp.rounds || "Not provided"}
+    Tips: ${exp.tips || "Not provided"}
+    Salary: ${exp.salary || "Not provided"}
+  `).join('\n')}
+
+  Now answer the user's question clearly and professionally.
+  If the user asks:
+  - about a company → give its interview pattern, tips, difficulty, salary
+  - about best companies → answer using experienceCount
+  - about user's status → mention profile or uploaded experiences
+  `;
+
+  try {
     const response = await fetch(`${API_URL}?key=${GEMINI_API_KEY}`, {
       method: 'POST',
       headers: {
@@ -113,22 +127,25 @@ export const answerQuestion = async (question, experiences) => {
         ]
       })
     });
-    
+
     if (!response.ok) {
       const errorData = await response.json();
       console.error("Gemini API error:", errorData);
-      return "I apologize, but I cannot answer this question at the moment.";
+      throw new Error(`Gemini API error: ${errorData.error?.message || 'Unknown error'}`);
     }
-    
+
     const data = await response.json();
-    
-    if (!data.candidates || data.candidates.length === 0) {
-      return "I apologize, but I cannot answer this question at the moment.";
+    console.log("Gemini chatbot response:", data);
+
+    if (!data.candidates || !data.candidates[0]?.content?.parts?.length) {
+      throw new Error("No valid response from Gemini");
     }
-    
+
     return data.candidates[0].content.parts[0].text;
+
   } catch (error) {
-    console.error('Error answering question:', error);
-    return "I apologize, but I cannot answer this question at the moment.";
+    console.error("Error answering question:", error);
+    return "I'm sorry, I couldn't fetch an answer right now. Please try again.";
   }
 };
+

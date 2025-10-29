@@ -3,7 +3,6 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../firebase/firebaseConfig';
 import { getUserProfile } from '../firebase/firestoreQueries';
-
 // Create the context
 const AuthContext = createContext();
 
@@ -60,6 +59,7 @@ export const AuthProvider = ({ children }) => {
     loading,
     setUserProfile
   };
+  
 
   return (
     <AuthContext.Provider value={value}>

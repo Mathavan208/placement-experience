@@ -67,81 +67,83 @@ const AddExperienceForm = ({ user }) => {
     }));
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    setError('');
+ const handleSubmit = async (e) => {
+  e.preventDefault();
+  setIsSubmitting(true);
+  setError('');
 
-    try {
-      let companyId = formData.companyName;
-      
-      // If it's a new company, create it first
-      if (formData.isNewCompany) {
-        const newCompanyData = {
-          name: formData.newCompanyName,
-          industry: formData.newCompanyIndustry,
-          description: formData.newCompanyDescription,
-          website: formData.newCompanyWebsite,
-          headquarters: formData.newCompanyHeadquarters,
-          founded: parseInt(formData.newCompanyFounded) || null,
-          employeeCount: formData.newCompanyEmployeeCount,
-          rating: 0, // Will be updated as experiences are added
-          experienceCount: 0,
-          lastUpdated: new Date(),
-          summary: ""
-        };
-        
-        const companyDoc = await addCompany(newCompanyData);
-        companyId = companyDoc.id;
-      }
+  try {
+    let companyId = formData.companyName;
 
-      const experienceData = {
-        userId: user.uid,
-        userName: user.displayName || 'Anonymous',
-        companyId: companyId,
-        companyName: formData.isNewCompany ? formData.newCompanyName : 
-          companies.find(c => c.id === formData.companyName)?.name || '',
-        position: formData.position,
-        description: formData.description,
-        rounds: formData.rounds,
-        tips: formData.tips,
-        difficulty: formData.difficulty,
-        offerStatus: formData.offerStatus,
-        salary: formData.salary,
-        location: formData.location,
-        interviewDate: new Date(formData.interviewDate),
-        createdAt: new Date(),
-        upvotes: 0,
-        views: 0
+    if (formData.isNewCompany) {
+      const newCompanyData = {
+        name: formData.newCompanyName,
+        industry: formData.newCompanyIndustry,
+        description: formData.newCompanyDescription || "",
+        website: formData.newCompanyWebsite || "",
+        headquarters: formData.newCompanyHeadquarters || "",
+        founded: formData.newCompanyFounded ? parseInt(formData.newCompanyFounded) : null,
+        employeeCount: formData.newCompanyEmployeeCount || "",
+        rating: 0,
+        experienceCount: 0,
+        lastUpdated: new Date(),
+        summary: ""
       };
 
-      await addExperience(experienceData);
-      navigate('/');
-    } catch (error) {
-      console.error('Error adding experience:', error);
-      setError('Failed to add experience. Please try again.');
-    } finally {
-      setIsSubmitting(false);
+      const companyDoc = await addCompany(newCompanyData);
+      companyId = companyDoc.id;
     }
-  };
+
+    const experienceData = {
+      userId: user.uid,
+      userName: user.displayName || 'Anonymous',
+      companyId: companyId,
+      companyName: formData.isNewCompany
+        ? formData.newCompanyName
+        : companies.find(c => c.id === formData.companyName)?.name || '',
+
+      position: formData.position,
+      description: formData.description,
+      rounds: formData.rounds,
+      tips: formData.tips || "",
+      difficulty: formData.difficulty || "",
+      offerStatus: formData.offerStatus || "",
+      salary: formData.salary || "",
+      location: formData.location || "",
+      interviewDate: formData.interviewDate ? new Date(formData.interviewDate) : null,
+      createdAt: new Date(),
+      upvotes: 0,
+      views: 0
+    };
+
+    await addExperience(experienceData);
+    navigate('/');
+  } catch (err) {
+    console.error('Error adding experience:', err);
+    setError('Failed to add experience. Please try again.');
+  } finally {
+    setIsSubmitting(false);
+  }
+};
+
 
   // Get today's date in YYYY-MM-DD format for the max attribute of the date input
   const today = new Date().toISOString().split('T')[0];
 
   return (
-    <div className="max-w-4xl mx-auto p-6 bg-gray-800 bg-opacity-80 backdrop-blur-md rounded-lg shadow-xl">
+    <div className="max-w-4xl p-6 mx-auto bg-gray-800 rounded-lg shadow-xl bg-opacity-80 backdrop-blur-md">
       <FuzzyText color="#fff" fontSize="2rem" className="mb-6">Share Your Experience</FuzzyText>
       
       {error && (
-        <div className="mb-4 p-3 bg-red-900 bg-opacity-50 border border-red-500 rounded-lg text-red-200">
+        <div className="p-3 mb-4 text-red-200 bg-red-900 bg-opacity-50 border border-red-500 rounded-lg">
           {error}
         </div>
       )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Company Selection or Creation */}
-        <div className="bg-gray-700 bg-opacity-50 p-4 rounded-lg">
-          <div className="flex items-center space-x-2 mb-4">
+        <div className="p-4 bg-gray-700 bg-opacity-50 rounded-lg">
+          <div className="flex items-center mb-4 space-x-2">
             <input
               type="checkbox"
               id="isNewCompany"
@@ -157,9 +159,9 @@ const AddExperienceForm = ({ user }) => {
             <div className="space-y-4">
               <h3 className="text-lg font-semibold text-white">New Company Details</h3>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div>
-                  <label htmlFor="newCompanyName" className="block text-sm font-medium mb-2">Company Name *</label>
+                  <label htmlFor="newCompanyName" className="block mb-2 text-sm font-medium">Company Name *</label>
                   <input
                     type="text"
                     id="newCompanyName"
@@ -168,12 +170,12 @@ const AddExperienceForm = ({ user }) => {
                     onChange={handleChange}
                     placeholder="Enter company name"
                     required
-                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
+                    className="w-full px-3 py-2 text-white bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
                 
                 <div>
-                  <label htmlFor="newCompanyIndustry" className="block text-sm font-medium mb-2">Industry</label>
+                  <label htmlFor="newCompanyIndustry" className="block mb-2 text-sm font-medium">Industry</label>
                   <input
                     type="text"
                     id="newCompanyIndustry"
@@ -181,12 +183,12 @@ const AddExperienceForm = ({ user }) => {
                     value={formData.newCompanyIndustry}
                     onChange={handleChange}
                     placeholder="e.g. Technology, Finance"
-                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
+                    className="w-full px-3 py-2 text-white bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
                 
                 <div>
-                  <label htmlFor="newCompanyWebsite" className="block text-sm font-medium mb-2">Website</label>
+                  <label htmlFor="newCompanyWebsite" className="block mb-2 text-sm font-medium">Website</label>
                   <input
                     type="url"
                     id="newCompanyWebsite"
@@ -194,12 +196,12 @@ const AddExperienceForm = ({ user }) => {
                     value={formData.newCompanyWebsite}
                     onChange={handleChange}
                     placeholder="https://example.com"
-                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
+                    className="w-full px-3 py-2 text-white bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
                 
                 <div>
-                  <label htmlFor="newCompanyHeadquarters" className="block text-sm font-medium mb-2">Headquarters</label>
+                  <label htmlFor="newCompanyHeadquarters" className="block mb-2 text-sm font-medium">Headquarters</label>
                   <input
                     type="text"
                     id="newCompanyHeadquarters"
@@ -207,12 +209,12 @@ const AddExperienceForm = ({ user }) => {
                     value={formData.newCompanyHeadquarters}
                     onChange={handleChange}
                     placeholder="e.g. San Francisco, CA"
-                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
+                    className="w-full px-3 py-2 text-white bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
                 
                 <div>
-                  <label htmlFor="newCompanyFounded" className="block text-sm font-medium mb-2">Founded Year</label>
+                  <label htmlFor="newCompanyFounded" className="block mb-2 text-sm font-medium">Founded Year</label>
                   <input
                     type="number"
                     id="newCompanyFounded"
@@ -222,12 +224,12 @@ const AddExperienceForm = ({ user }) => {
                     placeholder="e.g. 2010"
                     min="1800"
                     max={new Date().getFullYear()}
-                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
+                    className="w-full px-3 py-2 text-white bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
                 
                 <div>
-                  <label htmlFor="newCompanyEmployeeCount" className="block text-sm font-medium mb-2">Employee Count</label>
+                  <label htmlFor="newCompanyEmployeeCount" className="block mb-2 text-sm font-medium">Employee Count</label>
                   <input
                     type="text"
                     id="newCompanyEmployeeCount"
@@ -235,13 +237,13 @@ const AddExperienceForm = ({ user }) => {
                     value={formData.newCompanyEmployeeCount}
                     onChange={handleChange}
                     placeholder="e.g. 1000-5000"
-                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
+                    className="w-full px-3 py-2 text-white bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
               </div>
               
               <div>
-                <label htmlFor="newCompanyDescription" className="block text-sm font-medium mb-2">Company Description</label>
+                <label htmlFor="newCompanyDescription" className="block mb-2 text-sm font-medium">Company Description</label>
                 <textarea
                   id="newCompanyDescription"
                   name="newCompanyDescription"
@@ -249,20 +251,20 @@ const AddExperienceForm = ({ user }) => {
                   onChange={handleChange}
                   placeholder="Brief description of the company..."
                   rows={3}
-                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
+                  className="w-full px-3 py-2 text-white bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
             </div>
           ) : (
             <div>
-              <label htmlFor="companyName" className="block text-sm font-medium mb-2">Select Company *</label>
+              <label htmlFor="companyName" className="block mb-2 text-sm font-medium">Select Company *</label>
               <select
                 id="companyName"
                 name="companyName"
                 value={formData.companyName}
                 onChange={handleChange}
                 required
-                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
+                className="w-full px-3 py-2 text-white bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="">Select a company</option>
                 {companies.map(company => (
@@ -274,12 +276,12 @@ const AddExperienceForm = ({ user }) => {
         </div>
 
         {/* Experience Details */}
-        <div className="bg-gray-700 bg-opacity-50 p-4 rounded-lg">
-          <h3 className="text-lg font-semibold text-white mb-4">Experience Details</h3>
+        <div className="p-4 bg-gray-700 bg-opacity-50 rounded-lg">
+          <h3 className="mb-4 text-lg font-semibold text-white">Experience Details</h3>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
-              <label htmlFor="position" className="block text-sm font-medium mb-2">Position *</label>
+              <label htmlFor="position" className="block mb-2 text-sm font-medium">Position *</label>
               <input
                 type="text"
                 id="position"
@@ -288,12 +290,12 @@ const AddExperienceForm = ({ user }) => {
                 onChange={handleChange}
                 placeholder="e.g. Software Engineer"
                 required
-                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
+                className="w-full px-3 py-2 text-white bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
             
             <div>
-              <label htmlFor="interviewDate" className="block text-sm font-medium mb-2">Interview Date *</label>
+              <label htmlFor="interviewDate" className="block mb-2 text-sm font-medium">Interview Date *</label>
               <input
                 type="date"
                 id="interviewDate"
@@ -302,18 +304,18 @@ const AddExperienceForm = ({ user }) => {
                 onChange={handleChange}
                 max={today}
                 required
-                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
+                className="w-full px-3 py-2 text-white bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
             
             <div>
-              <label htmlFor="difficulty" className="block text-sm font-medium mb-2">Difficulty Level</label>
+              <label htmlFor="difficulty" className="block mb-2 text-sm font-medium">Difficulty Level</label>
               <select
                 id="difficulty"
                 name="difficulty"
                 value={formData.difficulty}
                 onChange={handleChange}
-                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
+                className="w-full px-3 py-2 text-white bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="">Select difficulty</option>
                 <option value="Easy">Easy</option>
@@ -323,13 +325,13 @@ const AddExperienceForm = ({ user }) => {
             </div>
             
             <div>
-              <label htmlFor="offerStatus" className="block text-sm font-medium mb-2">Offer Status</label>
+              <label htmlFor="offerStatus" className="block mb-2 text-sm font-medium">Offer Status</label>
               <select
                 id="offerStatus"
                 name="offerStatus"
                 value={formData.offerStatus}
                 onChange={handleChange}
-                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
+                className="w-full px-3 py-2 text-white bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="">Select status</option>
                 <option value="Accepted">Accepted</option>
@@ -340,7 +342,7 @@ const AddExperienceForm = ({ user }) => {
             </div>
             
             <div>
-              <label htmlFor="salary" className="block text-sm font-medium mb-2">Salary Range</label>
+              <label htmlFor="salary" className="block mb-2 text-sm font-medium">Salary Range</label>
               <input
                 type="text"
                 id="salary"
@@ -348,12 +350,12 @@ const AddExperienceForm = ({ user }) => {
                 value={formData.salary}
                 onChange={handleChange}
                 placeholder="e.g. $80,000 - $100,000"
-                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
+                className="w-full px-3 py-2 text-white bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
             
             <div>
-              <label htmlFor="location" className="block text-sm font-medium mb-2">Location</label>
+              <label htmlFor="location" className="block mb-2 text-sm font-medium">Location</label>
               <input
                 type="text"
                 id="location"
@@ -361,13 +363,13 @@ const AddExperienceForm = ({ user }) => {
                 value={formData.location}
                 onChange={handleChange}
                 placeholder="e.g. San Francisco, CA"
-                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
+                className="w-full px-3 py-2 text-white bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
           </div>
           
           <div className="mt-4">
-            <label htmlFor="description" className="block text-sm font-medium mb-2">Experience Description *</label>
+            <label htmlFor="description" className="block mb-2 text-sm font-medium">Experience Description *</label>
             <textarea
               id="description"
               name="description"
@@ -376,38 +378,38 @@ const AddExperienceForm = ({ user }) => {
               placeholder="Describe your interview experience in detail..."
               required
               rows={5}
-              className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
+              className="w-full px-3 py-2 text-white bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
           
           <div className="mt-4">
-            <label className="block text-sm font-medium mb-2">Interview Rounds</label>
-            <div className="flex space-x-2 mb-2">
+            <label className="block mb-2 text-sm font-medium">Interview Rounds</label>
+            <div className="flex mb-2 space-x-2">
               <input
                 type="text"
                 value={roundInput}
                 onChange={(e) => setRoundInput(e.target.value)}
                 placeholder="e.g. Technical Round 1"
-                className="flex-1 px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
+                className="flex-1 px-3 py-2 text-white bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
               <button
                 type="button"
                 onClick={handleAddRound}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                className="px-4 py-2 text-white transition-colors bg-blue-600 rounded-lg hover:bg-blue-700"
               >
                 Add
               </button>
             </div>
             <div className="flex flex-wrap gap-2">
               {formData.rounds.map((round, index) => (
-                <div key={index} className="flex items-center bg-gray-600 px-3 py-1 rounded-full">
+                <div key={index} className="flex items-center px-3 py-1 bg-gray-600 rounded-full">
                   <span className="text-sm">{round}</span>
                   <button
                     type="button"
                     onClick={() => handleRemoveRound(index)}
                     className="ml-2 text-red-400 hover:text-red-300"
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                     </svg>
                   </button>
@@ -417,7 +419,7 @@ const AddExperienceForm = ({ user }) => {
           </div>
           
           <div className="mt-4">
-            <label htmlFor="tips" className="block text-sm font-medium mb-2">Tips for Future Candidates</label>
+            <label htmlFor="tips" className="block mb-2 text-sm font-medium">Tips for Future Candidates</label>
             <textarea
               id="tips"
               name="tips"
@@ -425,7 +427,7 @@ const AddExperienceForm = ({ user }) => {
               onChange={handleChange}
               placeholder="Share any tips or advice for future candidates..."
               rows={3}
-              className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
+              className="w-full px-3 py-2 text-white bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
         </div>
@@ -434,21 +436,22 @@ const AddExperienceForm = ({ user }) => {
           <button
             type="button"
             onClick={() => navigate('/')}
-            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
+            className="px-4 py-2 text-white transition-colors bg-gray-700 rounded-lg hover:bg-gray-600"
           >
             Cancel
           </button>
-          <ElectricBorder
-            color="#5227FF"
-            speed={1}
-            chaos={1}
-            thickness={2}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors cursor-pointer"
-            onClick={handleSubmit}
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? 'Submitting...' : 'Submit Experience'}
-          </ElectricBorder>
+        <button type="submit" disabled={isSubmitting} className="relative">
+  <ElectricBorder
+    color="#5227FF"
+    speed={1}
+    chaos={1}
+    thickness={2}
+    className="px-4 py-2 text-white transition-colors bg-blue-600 rounded-lg cursor-pointer hover:bg-blue-700"
+  >
+    {isSubmitting ? 'Submitting...' : 'Submit Experience'}
+  </ElectricBorder>
+</button>
+
         </div>
       </form>
     </div>

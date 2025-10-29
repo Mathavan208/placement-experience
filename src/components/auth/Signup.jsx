@@ -15,6 +15,7 @@ const Signup = () => {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+const [acceptTerms, setAcceptTerms] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -24,6 +25,11 @@ const Signup = () => {
       setError('Passwords do not match');
       return;
     }
+    if (!acceptTerms) {
+  setError("You must accept the Terms & Disclaimer");
+  return;
+}
+
 
     setIsLoading(true);
 
@@ -36,16 +42,21 @@ const Signup = () => {
       await updateProfile(user, { displayName: name });
       
       // Create user document in Firestore
-      await setDoc(doc(db, 'users', user.uid), {
-        uid: user.uid,
-        displayName: name,
-        email: email,
-        createdAt: new Date(),
-        bio: '',
-        profilePicture: '',
-        experiences: []
-      });
-      
+    await setDoc(doc(db, 'users', user.uid), {
+  uid: user.uid,
+  displayName: name,
+  email: email,
+  createdAt: new Date(),
+  bio: '',
+  profilePicture: '',
+  experiences: [],
+  termsAccepted: {
+    accepted: true,
+    acceptedAt: new Date(),
+    version: "1.0"
+  }
+});
+
       navigate('/');
     } catch (error) {
       let errorMessage = 'An error occurred during signup';
@@ -73,42 +84,42 @@ const Signup = () => {
 
   return (
     <div className="max-w-md mx-auto mt-16">
-      <div className="bg-gray-800 bg-opacity-80 backdrop-blur-md rounded-lg shadow-xl p-8">
+      <div className="p-8 bg-gray-800 rounded-lg shadow-xl bg-opacity-80 backdrop-blur-md">
         <FuzzyText color="#fff" fontSize="2rem" className="mb-6 text-center">Sign Up</FuzzyText>
         
         {error && (
-          <div className="mb-4 p-3 bg-red-900 bg-opacity-50 border border-red-500 rounded-lg text-red-200">
+          <div className="p-3 mb-4 text-red-200 bg-red-900 bg-opacity-50 border border-red-500 rounded-lg">
             {error}
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label htmlFor="name" className="block text-sm font-medium mb-2">Name</label>
+            <label htmlFor="name" className="block mb-2 text-sm font-medium">Name</label>
             <input
               type="text"
               id="name"
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
-              className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
+              className="w-full px-3 py-2 text-white bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
           <div>
-            <label htmlFor="email" className="block text-sm font-medium mb-2">Email</label>
+            <label htmlFor="email" className="block mb-2 text-sm font-medium">Email</label>
             <input
               type="email"
               id="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
+              className="w-full px-3 py-2 text-white bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
           <div>
-            <label htmlFor="password" className="block text-sm font-medium mb-2">Password</label>
+            <label htmlFor="password" className="block mb-2 text-sm font-medium">Password</label>
             <input
               type="password"
               id="password"
@@ -116,12 +127,12 @@ const Signup = () => {
               onChange={(e) => setPassword(e.target.value)}
               required
               minLength="6"
-              className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
+              className="w-full px-3 py-2 text-white bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
           <div>
-            <label htmlFor="confirmPassword" className="block text-sm font-medium mb-2">Confirm Password</label>
+            <label htmlFor="confirmPassword" className="block mb-2 text-sm font-medium">Confirm Password</label>
             <input
               type="password"
               id="confirmPassword"
@@ -129,9 +140,19 @@ const Signup = () => {
               onChange={(e) => setConfirmPassword(e.target.value)}
               required
               minLength="6"
-              className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
+              className="w-full px-3 py-2 text-white bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
+<div className="flex items-center">
+  <input
+    type="checkbox"
+    className="mr-2"
+    onChange={(e) => setAcceptTerms(e.target.checked)}
+  />
+  <span className="text-sm">
+    I agree to the Terms of Use and Disclaimer
+  </span>
+</div>
 
           <div className="pt-2">
             <ElectricBorder
@@ -144,11 +165,11 @@ const Signup = () => {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+                className="w-full px-4 py-2 text-white transition-colors bg-blue-600 rounded-lg hover:bg-blue-700 disabled:bg-blue-800 disabled:cursor-not-allowed"
               >
                 {isLoading ? (
                   <span className="flex items-center justify-center">
-                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4 mr-2 -ml-1 text-white animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
